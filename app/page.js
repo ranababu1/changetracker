@@ -1,101 +1,280 @@
-import Image from "next/image";
+// app/page.js
+'use client';
+
+import React, { useState, useEffect } from 'react';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  // State for form data
+  const [formData, setFormData] = useState({
+    project: '',
+    changesRequested: '',
+    dueDate: '',
+    dateRequested: '', // New field
+    bugType: '',
+    projectOwner: '',
+    responsibility: '',
+    comment: '',
+    ticketId: '',
+  });
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // State for dropdown data
+  const [projects, setProjects] = useState([]);
+  const [bugTypes, setBugTypes] = useState([]);
+  const [projectOwners, setProjectOwners] = useState([]);
+  const [responsibilities, setResponsibilities] = useState([]);
+
+  // State for toast message
+  const [showToast, setShowToast] = useState(false);
+
+  // Fetch dropdown data
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [projectsRes, bugTypesRes, projectOwnersRes, responsibilitiesRes] = await Promise.all([
+          fetch('/api/projects'),
+          fetch('/api/bug-types'),
+          fetch('/api/project-owners'),
+          fetch('/api/responsibilities'),
+        ]);
+
+        const [projectsData, bugTypesData, projectOwnersData, responsibilitiesData] = await Promise.all([
+          projectsRes.json(),
+          bugTypesRes.json(),
+          projectOwnersRes.json(),
+          responsibilitiesRes.json(),
+        ]);
+
+        setProjects(projectsData);
+        setBugTypes(bugTypesData);
+        setProjectOwners(projectOwnersData);
+        setResponsibilities(responsibilitiesData);
+      } catch (error) {
+        console.error('Error fetching dropdown data:', error);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  // Handle form field changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      const res = await fetch('/api/change-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (res.ok) {
+        // Reset form
+        setFormData({
+          project: '',
+          changesRequested: '',
+          dueDate: '',
+          dateRequested: '',
+          bugType: '',
+          projectOwner: '',
+          responsibility: '',
+          comment: '',
+          ticketId: '',
+        });
+        // Show toast message
+        setShowToast(true);
+        setTimeout(() => {
+          setShowToast(false);
+        }, 3000); // Hide after 3 seconds
+      } else {
+        const errorData = await res.json();
+        console.error('Error submitting change request:', errorData);
+        alert('Failed to submit change request.');
+      }
+    } catch (error) {
+      console.error('Error submitting change request:', error);
+      alert('Failed to submit change request.');
+    }
+  };
+
+  return (
+    <div className="container mx-auto p-4">
+      {/* Toast Message */}
+      {showToast && (
+        <div className="toast toast-top toast-end">
+          <div className="alert alert-success">
+            <span>Changelog successfully saved.</span>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      )}
+      <h1 className="text-2xl font-bold mb-4">Submit Change Request</h1>
+      <form onSubmit={handleSubmit}>
+        {/* Project Selection */}
+        <div className="form-control mb-4">
+          <label className="label">
+            <span className="label-text">Project</span>
+          </label>
+          <select
+            name="project"
+            value={formData.project}
+            onChange={handleChange}
+            className="select select-bordered w-full"
+            required
+          >
+            <option value="">Select a project</option>
+            {projects.map((project) => (
+              <option key={project._id} value={project._id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Changes Requested */}
+        <div className="form-control mb-4">
+          <label className="label">
+            <span className="label-text">Changes Requested</span>
+          </label>
+          <input
+            type="text"
+            name="changesRequested"
+            value={formData.changesRequested}
+            onChange={handleChange}
+            className="input input-bordered w-full"
+            required
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+        </div>
+
+        {/* Due Date */}
+        <div className="form-control mb-4">
+          <label className="label">
+            <span className="label-text">Due Date</span>
+          </label>
+          <input
+            type="date"
+            name="dueDate"
+            value={formData.dueDate}
+            onChange={handleChange}
+            className="input input-bordered w-full"
+            required
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
+        </div>
+
+        {/* Date Requested */}
+        <div className="form-control mb-4">
+          <label className="label">
+            <span className="label-text">Date Requested</span>
+          </label>
+          <input
+            type="date"
+            name="dateRequested"
+            value={formData.dateRequested}
+            onChange={handleChange}
+            className="input input-bordered w-full"
+            required
           />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </div>
+
+        {/* Bug Type */}
+        <div className="form-control mb-4">
+          <label className="label">
+            <span className="label-text">Type of Bug</span>
+          </label>
+          <select
+            name="bugType"
+            value={formData.bugType}
+            onChange={handleChange}
+            className="select select-bordered w-full"
+            required
+          >
+            <option value="">Select a bug type</option>
+            {bugTypes.map((bugType) => (
+              <option key={bugType._id} value={bugType._id}>
+                {bugType.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Project Owner */}
+        <div className="form-control mb-4">
+          <label className="label">
+            <span className="label-text">Project Owner</span>
+          </label>
+          <select
+            name="projectOwner"
+            value={formData.projectOwner}
+            onChange={handleChange}
+            className="select select-bordered w-full"
+            required
+          >
+            <option value="">Select a project owner</option>
+            {projectOwners.map((owner) => (
+              <option key={owner._id} value={owner._id}>
+                {owner.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Responsibility */}
+        <div className="form-control mb-4">
+          <label className="label">
+            <span className="label-text">Responsibility</span>
+          </label>
+          <select
+            name="responsibility"
+            value={formData.responsibility}
+            onChange={handleChange}
+            className="select select-bordered w-full"
+            required
+          >
+            <option value="">Select responsibility</option>
+            {responsibilities.map((resp) => (
+              <option key={resp._id} value={resp._id}>
+                {resp.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Comment */}
+        <div className="form-control mb-4">
+          <label className="label">
+            <span className="label-text">Comment</span>
+          </label>
+          <textarea
+            name="comment"
+            value={formData.comment}
+            onChange={handleChange}
+            className="textarea textarea-bordered w-full"
+          ></textarea>
+        </div>
+
+        {/* Ticket ID */}
+        <div className="form-control mb-4">
+          <label className="label">
+            <span className="label-text">Ticket ID</span>
+          </label>
+          <input
+            type="text"
+            name="ticketId"
+            value={formData.ticketId}
+            onChange={handleChange}
+            className="input input-bordered w-full"
+          />
+        </div>
+
+        {/* Submit Button */}
+        <button type="submit" className="btn btn-primary mt-4">
+          Submit
+        </button>
+      </form>
     </div>
   );
 }

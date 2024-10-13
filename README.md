@@ -1,6 +1,6 @@
 # Changelog Manager App
 
-This is a fullstack application built using **Next.js** and **MongoDB**. The purpose of this app is to allow users to store and manage changelogs for different projects. It features a simple UI with forms for input, storage in a **MongoDB** database.
+**Changetracker** is a fullstack application built using **Next.js** and **MongoDB**. The purpose of this app is to allow users to store and manage changelogs for different projects. It features a simple UI with forms for input, storage in a **MongoDB** database.
 
 ## Features
 
