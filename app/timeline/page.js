@@ -1,43 +1,75 @@
 // app/timeline/page.js
-import dbConnect from 'utils/db';
-import ChangeRequest from 'models/ChangeRequest';
-import Project from 'models/Project';
+'use client';
 
-export default async function TimelinePage() {
-  await dbConnect();
+import React, { useState, useEffect } from 'react';
 
-  // Fetch change requests and sort by dateRequested
-  const changeRequests = await ChangeRequest.find({})
-    .populate('project')
-    .populate('bugType')
-    .populate('projectOwner')
-    .populate('responsibility')
-    .sort({ dateRequested: -1 })
-    .lean();
+export default function TimelinePage() {
+  const [projects, setProjects] = useState([]);
+  const [changeRequests, setChangeRequests] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
 
-  // Group change requests by project
-  const projectsMap = {};
-
-  changeRequests.forEach((request) => {
-    const projectId = request.project?._id;
-    if (!projectsMap[projectId]) {
-      projectsMap[projectId] = {
-        project: request.project,
-        changeRequests: [],
-      };
+  useEffect(() => {
+    // Fetch all projects
+    async function fetchProjects() {
+      try {
+        const res = await fetch('/api/projects');
+        const data = await res.json();
+        setProjects(data);
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+      }
     }
-    projectsMap[projectId].changeRequests.push(request);
-  });
 
-  const projects = Object.values(projectsMap);
+    fetchProjects();
+  }, []);
+
+  useEffect(() => {
+    // Fetch change requests
+    async function fetchChangeRequests() {
+      try {
+        const res = await fetch('/api/change-requests');
+        const data = await res.json();
+        setChangeRequests(data);
+      } catch (error) {
+        console.error('Error fetching change requests:', error);
+      }
+    }
+
+    fetchChangeRequests();
+  }, []);
+
+  // Filter change requests by selected project
+  const filteredChangeRequests = changeRequests.filter(
+    (request) => request.project?._id === selectedProjectId
+  );
+
+  // Get the selected project object
+  const selectedProject = projects.find((proj) => proj._id === selectedProjectId);
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold">Timeline</h1>
+      {/* Project Selection Dropdown */}
+      <div className="mb-6">
+        <label className="label">
+          <span className="label-text text-xl font-bold">Select Project</span>
+        </label>
+        <select
+          value={selectedProjectId}
+          onChange={(e) => setSelectedProjectId(e.target.value)}
+          className="select select-bordered w-full max-w-xs"
+        >
+          <option value="">Select a project</option>
+          {projects.map((project) => (
+            <option key={project._id} value={project._id}>
+              {project.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      {projects.map((projectGroup) => (
-        <div key={projectGroup.project._id} className="mb-8">
-          <h2 className="text-xl font-semibold mb-2">{projectGroup.project.name}</h2>
+      {selectedProjectId ? (
+        <div>
+          <h2 className="text-xl font-semibold mb-2">{selectedProject?.name} Timeline</h2>
           <ul className="timeline timeline-snap-icon max-md:timeline-compact timeline-vertical">
             {/* Project Init */}
             <li>
@@ -58,16 +90,16 @@ export default async function TimelinePage() {
               </div>
               <div className="timeline-start mb-10 md:text-end">
                 <time className="font-mono italic">
-                  {new Date(projectGroup.project.createdAt).toLocaleDateString()}
+                  {new Date(selectedProject?.createdAt).toLocaleDateString()}
                 </time>
-                <div>{projectGroup.project.name}</div>
+                <div>{selectedProject?.name}</div>
                 <div>Project Init</div>
               </div>
               <hr />
             </li>
 
             {/* Change Requests */}
-            {projectGroup.changeRequests.map((request, index) => (
+            {filteredChangeRequests.map((request, index) => (
               <li key={request._id}>
                 <hr />
                 <div className="timeline-middle">
@@ -87,29 +119,34 @@ export default async function TimelinePage() {
                 </div>
                 <div className={`timeline-${index % 2 === 0 ? 'end' : 'start'} mb-10`}>
                   <time className="font-mono italic">
-                    {new Date(request.dateRequested).toLocaleDateString()}
+                    {request.dateRequested
+                      ? new Date(request.dateRequested).toLocaleDateString()
+                      : 'N/A'}
                   </time>
                   <div className="text-lg">Changes requested: {request.changesRequested}</div>
-                  <div>Description (Comment): {request.comment}</div>
-                  {/* Remaining fields */}
-                  <div>Due Date: {new Date(request.dueDate).toLocaleDateString()}</div>
+                  <div>Description (Comment): {request.comment || 'N/A'}</div>
+                  {/* Display Actual Delivery Date */}
                   <div>
                     Actual Delivery Date:{' '}
                     {request.actualDeliveryDate
                       ? new Date(request.actualDeliveryDate).toLocaleDateString()
                       : 'N/A'}
                   </div>
-                  <div>Bug Type: {request.bugType?.name}</div>
-                  <div>Project Owner: {request.projectOwner?.name}</div>
-                  <div>Responsibility: {request.responsibility?.name}</div>
-                  <div>Ticket ID: {request.ticketId}</div>
+                  {/* Remaining fields */}
+                  <div>Due Date: {new Date(request.dueDate).toLocaleDateString()}</div>
+                  <div>Bug Type: {request.bugType?.name || 'N/A'}</div>
+                  <div>Project Owner: {request.projectOwner?.name || 'N/A'}</div>
+                  <div>Responsibility: {request.responsibility?.name || 'N/A'}</div>
+                  <div>Ticket ID: {request.ticketId || 'N/A'}</div>
                 </div>
                 <hr />
               </li>
             ))}
           </ul>
         </div>
-      ))}
+      ) : (
+        <p className="text-center text-gray-500">Please select a project to view its timeline.</p>
+      )}
     </div>
   );
 }

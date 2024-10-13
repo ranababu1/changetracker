@@ -39,6 +39,11 @@ export default function ChangelogPage() {
     }
   };
 
+  // Function to truncate comment
+  const truncate = (str, n) => {
+    return str.length > n ? str.substr(0, n - 1) + '...' : str;
+  };
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold">Changelog</h1>
@@ -63,7 +68,7 @@ export default function ChangelogPage() {
             {changeRequests.map((request) => (
               <tr key={request._id}>
                 <td>{request.project?.name || 'N/A'}</td>
-                <td>{request.changesRequested}</td>
+                <td>{request.changesRequested || 'N/A'}</td>
                 <td>
                   {request.dateRequested
                     ? new Date(request.dateRequested).toLocaleDateString()
@@ -80,10 +85,61 @@ export default function ChangelogPage() {
                 <td>{request.bugType?.name || 'N/A'}</td>
                 <td>{request.projectOwner?.name || 'N/A'}</td>
                 <td>{request.responsibility?.name || 'N/A'}</td>
-                <td>{request.comment || 'N/A'}</td>
+                {/* Comment with truncation and tooltip */}
+                {/* <td>
+                  <div
+                    className="tooltip tooltip-top"
+                    data-tip={request.comment || 'N/A'}
+                    style={{ maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  >
+                    {truncate(request.comment || 'N/A', 20)}
+                  </div>
+                </td> */}
+                {/* <td>
+  <div
+    className="tooltip tooltip-top"
+    data-tip={request.comment || 'N/A'}
+  >
+    <span
+      style={{
+        maxWidth: '200px',
+        display: 'inline-block',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      }}
+    >
+      {truncate(request.comment || 'N/A', 20)}
+    </span>
+  </div>
+</td> */}
+
+<td>
+  <div className="dropdown dropdown-top">
+    <label
+      tabIndex={0}
+      className="text-left cursor-pointer"
+      style={{
+        maxWidth: '200px',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      }}
+    >
+      {truncate(request.comment || 'N/A', 50)}
+    </label>
+    <div
+      tabIndex={0}
+      className="dropdown-content p-2 shadow bg-base-200 rounded-box w-64"
+    >
+      <p>{request.comment || 'N/A'}</p>
+    </div>
+  </div>
+</td>
+
+
                 <td>{request.ticketId || 'N/A'}</td>
                 <td>
-                  {/* Add Edit button if implementing edit functionality */}
                   <button
                     onClick={() => handleDelete(request._id)}
                     className="btn btn-sm btn-error"
