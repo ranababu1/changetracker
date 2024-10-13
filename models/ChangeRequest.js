@@ -5,8 +5,8 @@ const ChangeRequestSchema = new mongoose.Schema(
   {
     project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
     changesRequested: { type: String, required: true },
-    dateRequested: { type: Date, required: true },
     dueDate: { type: Date, required: true },
+    dateRequested: { type: Date, required: true },
     actualDeliveryDate: { type: Date },
     bugType: { type: mongoose.Schema.Types.ObjectId, ref: 'BugType', required: true },
     projectOwner: { type: mongoose.Schema.Types.ObjectId, ref: 'ProjectOwner', required: true },

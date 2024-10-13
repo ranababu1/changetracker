@@ -9,7 +9,8 @@ export default function Home() {
     project: '',
     changesRequested: '',
     dueDate: '',
-    dateRequested: '', // New field
+    dateRequested: '',
+    actualDeliveryDate: '', 
     bugType: '',
     projectOwner: '',
     responsibility: '',
@@ -80,6 +81,7 @@ export default function Home() {
           changesRequested: '',
           dueDate: '',
           dateRequested: '',
+          actualDeliveryDate: '', 
           bugType: '',
           projectOwner: '',
           responsibility: '',
@@ -90,7 +92,7 @@ export default function Home() {
         setShowToast(true);
         setTimeout(() => {
           setShowToast(false);
-        }, 3000); // Hide after 3 seconds
+        }, 3000); 
       } else {
         const errorData = await res.json();
         console.error('Error submitting change request:', errorData);
@@ -177,6 +179,20 @@ export default function Home() {
             onChange={handleChange}
             className="input input-bordered w-full"
             required
+          />
+        </div>
+
+        {/* Actual Delivery Date */}
+        <div className="form-control mb-4">
+          <label className="label">
+            <span className="label-text">Actual Delivery Date</span>
+          </label>
+          <input
+            type="date"
+            name="actualDeliveryDate"
+            value={formData.actualDeliveryDate}
+            onChange={handleChange}
+            className="input input-bordered w-full"
           />
         </div>
 
