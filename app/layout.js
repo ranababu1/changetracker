@@ -1,6 +1,7 @@
 // app/layout.js
 import './globals.css';
 import Link from 'next/link';
+import { Analytics } from '@vercel/analytics/react';
 
 export const metadata = {
   title: 'Change Tracker',
@@ -54,6 +55,7 @@ export default function RootLayout({ children }) {
           </ul>
         </nav>
         <main className="container mx-auto p-4">{children}</main>
+        <Analytics />
       </body>
     </html>
   );
