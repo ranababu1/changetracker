@@ -93,6 +93,9 @@ export default function Home() {
         setTimeout(() => {
           setShowToast(false);
         }, 3000); // Hide after 3 seconds
+
+        // Trigger revalidation
+        await fetch(`/api/revalidate?secret=${process.env.NEXT_PUBLIC_REVALIDATE_SECRET}`);
       } else {
         const errorData = await res.json();
         console.error('Error submitting change request:', errorData);

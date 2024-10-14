@@ -1,152 +1,85 @@
 // app/timeline/page.js
-'use client';
+import dbConnect from 'utils/db';
+import ChangeRequest from 'models/ChangeRequest';
+import Project from 'models/Project';
+import TimelineClientComponent from './TimelineClientComponent';
 
-import React, { useState, useEffect } from 'react';
+export const revalidate = 3600; // Revalidate this page every 1hr
 
-export default function TimelinePage() {
-  const [projects, setProjects] = useState([]);
-  const [changeRequests, setChangeRequests] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState('');
+export default async function TimelinePage() {
+  await dbConnect();
 
-  useEffect(() => {
-    // Fetch all projects
-    async function fetchProjects() {
-      try {
-        const res = await fetch('/api/projects');
-        const data = await res.json();
-        setProjects(data);
-      } catch (error) {
-        console.error('Error fetching projects:', error);
-      }
-    }
+  try {
+    // Fetch projects
+    const projects = await Project.find({}).lean();
 
-    fetchProjects();
-  }, []);
+    // Convert ObjectIds and Dates to strings
+    const projectsData = projects.map((project) => ({
+      ...project,
+      _id: project._id.toString(),
+      createdAt: project.createdAt.toISOString(),
+      updatedAt: project.updatedAt.toISOString(),
+    }));
 
-  useEffect(() => {
     // Fetch change requests
-    async function fetchChangeRequests() {
-      try {
-        const res = await fetch('/api/change-requests');
-        const data = await res.json();
-        setChangeRequests(data);
-      } catch (error) {
-        console.error('Error fetching change requests:', error);
-      }
-    }
+    const changeRequests = await ChangeRequest.find({})
+      .populate('project')
+      .populate('bugType')
+      .populate('projectOwner')
+      .populate('responsibility')
+      .sort({ dateRequested: -1 })
+      .lean();
 
-    fetchChangeRequests();
-  }, []);
+    const changeRequestsData = changeRequests.map((request) => ({
+      ...request,
+      _id: request._id.toString(),
+      project: request.project
+        ? {
+            ...request.project,
+            _id: request.project._id.toString(),
+          }
+        : null,
+      bugType: request.bugType
+        ? {
+            ...request.bugType,
+            _id: request.bugType._id.toString(),
+          }
+        : null,
+      projectOwner: request.projectOwner
+        ? {
+            ...request.projectOwner,
+            _id: request.projectOwner._id.toString(),
+          }
+        : null,
+      responsibility: request.responsibility
+        ? {
+            ...request.responsibility,
+            _id: request.responsibility._id.toString(),
+          }
+        : null,
+      dateRequested: request.dateRequested ? request.dateRequested.toISOString() : null,
+      dueDate: request.dueDate ? request.dueDate.toISOString() : null,
+      actualDeliveryDate: request.actualDeliveryDate
+        ? request.actualDeliveryDate.toISOString()
+        : null,
+      createdAt: request.createdAt.toISOString(),
+      updatedAt: request.updatedAt.toISOString(),
+    }));
 
-  // Filter change requests by selected project
-  const filteredChangeRequests = changeRequests.filter(
-    (request) => request.project?._id === selectedProjectId
-  );
-
-  // Get the selected project object
-  const selectedProject = projects.find((proj) => proj._id === selectedProjectId);
-
-  return (
-    <div className="container mx-auto p-4">
-      {/* Project Selection Dropdown */}
-      <div className="mb-6">
-        <label className="label">
-          <span className="label-text text-xl font-bold">Select Project</span>
-        </label>
-        <select
-          value={selectedProjectId}
-          onChange={(e) => setSelectedProjectId(e.target.value)}
-          className="select select-bordered w-full max-w-xs"
-        >
-          <option value="">Select a project</option>
-          {projects.map((project) => (
-            <option key={project._id} value={project._id}>
-              {project.name}
-            </option>
-          ))}
-        </select>
+    // Render the Client Component with fetched data
+    return (
+      <TimelineClientComponent
+        projects={projectsData}
+        changeRequests={changeRequestsData}
+      />
+    );
+  } catch (error) {
+    console.error('Error fetching timeline data:', error);
+    return (
+      <div className="container mx-auto p-4">
+        <h1 className="text-xl font-bold text-red-500">Error loading timeline</h1>
+        <p>{error.message}</p>
       </div>
-
-      {selectedProjectId ? (
-        <div>
-          <h2 className="text-xl font-semibold mb-2">{selectedProject?.name} Timeline</h2>
-          <ul className="timeline timeline-snap-icon max-md:timeline-compact timeline-vertical">
-            {/* Project Init */}
-            <li>
-              <div className="timeline-middle">
-                {/* Icon */}
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div className="timeline-start mb-10 md:text-end">
-                <time className="font-mono italic">
-                  {new Date(selectedProject?.createdAt).toLocaleDateString()}
-                </time>
-                <div>{selectedProject?.name}</div>
-                <div>Project Init</div>
-              </div>
-              <hr />
-            </li>
-
-            {/* Change Requests */}
-            {filteredChangeRequests.map((request, index) => (
-              <li key={request._id}>
-                <hr />
-                <div className="timeline-middle">
-                  {/* Icon */}
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className={`timeline-${index % 2 === 0 ? 'end' : 'start'} mb-10`}>
-                  <time className="font-mono italic">
-                    {request.dateRequested
-                      ? new Date(request.dateRequested).toLocaleDateString()
-                      : 'N/A'}
-                  </time>
-                  <div className="text-lg">Changes requested: {request.changesRequested}</div>
-                  <div>Description (Comment): {request.comment || 'N/A'}</div>
-                  {/* Display Actual Delivery Date */}
-                  <div>
-                    Actual Delivery Date:{' '}
-                    {request.actualDeliveryDate
-                      ? new Date(request.actualDeliveryDate).toLocaleDateString()
-                      : 'N/A'}
-                  </div>
-                  {/* Remaining fields */}
-                  <div>Due Date: {new Date(request.dueDate).toLocaleDateString()}</div>
-                  <div>Bug Type: {request.bugType?.name || 'N/A'}</div>
-                  <div>Project Owner: {request.projectOwner?.name || 'N/A'}</div>
-                  <div>Responsibility: {request.responsibility?.name || 'N/A'}</div>
-                  <div>Ticket ID: {request.ticketId || 'N/A'}</div>
-                </div>
-                <hr />
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : (
-        <p className="text-center text-gray-500">Please select a project to view its timeline.</p>
-      )}
-    </div>
-  );
+    );
+  }
 }
